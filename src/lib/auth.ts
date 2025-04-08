@@ -24,9 +24,9 @@ export async function signUp(email: string, password: string): Promise<{ error: 
   }
 }
 
-export async function signIn(email: string, password: string, rememberMe: boolean): Promise<{ error: AuthError | null }> {
+export async function signIn(email: string, password: string): Promise<{ error: AuthError | null }> {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     });

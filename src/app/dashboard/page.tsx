@@ -412,9 +412,9 @@ export default function Dashboard() {
         withdrawal_date: withdrawalDate,
       };
 
-      console.log('Sending withdrawal data:', withdrawData); // เพิ่ม log เพื่อตรวจสอบข้อมูล
+      console.log('Sending withdrawal data:', withdrawData);
 
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('withdrawals')
         .insert(withdrawData)
         .select();
@@ -454,7 +454,7 @@ export default function Dashboard() {
       setShowSuccessModal(true);
 
     } catch (error) {
-      console.error('Unexpected error:', error); // เพิ่ม error logging
+      console.error('Unexpected error:', error);
       setError('เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
@@ -527,7 +527,7 @@ export default function Dashboard() {
         
         // คำนวณชั่วโมง OT ใหม่
         const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
-        const totalOTHours = otDays.reduce((total) => total + 4, 0); // แก้ไขการใช้ parameter
+        const totalOTHours = otDays.reduce((total) => total + 4, 0);
         setOverTime(totalOTHours);
         
         // คำนวณ salary ใหม่
