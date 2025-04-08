@@ -43,7 +43,7 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      const { error: signInError } = await signIn(email, password, rememberMe);
+      const { error: signInError } = await signIn(email, password);
       if (signInError) {
         if (signInError.message.includes('Invalid login credentials')) {
           setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
