@@ -181,71 +181,7 @@ export default function Dashboard() {
       } catch (error) {
         console.error('Unexpected error:', error);
         router.push('/');
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, age, rate, email, is_admin')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile) {
-        router.push('/profile');
         return;
-      }
-
-      setProfile(profile);
-      setEditName(profile.name || '');
-      setEditAge(profile.age?.toString() || '');
-      setEditRate(profile.rate?.toString() || '');
-      setEditEmail(profile.email || '');
-
-      // ดึงข้อมูล check ins และคำนวณ salary และ day time
-      const { data: checkIns } = await supabase
-        .from('check_ins')
-        .select('check_date, shift')
-        .eq('user_id', user.id)
-        .order('check_date', { ascending: true });
-
-      if (checkIns) {
-        setCheckInList(checkIns);
-        
-        // นับจำนวนวันทั้งหมดที่เข้างาน
-        setDayTime(checkIns.length);
-        
-        // คำนวณชั่วโมง OT
-        const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
-        const totalOTHours = otDays.reduce((total) => total + 4, 0); // แก้ไขการใช้ parameter
-        setOverTime(totalOTHours);
-        
-        // คำนวณ salary
-        const normalSalary = checkIns.length * profile.rate;
-        const otSalary = totalOTHours * 60;
-        const totalSalary = normalSalary + otSalary;
-        
-        setSalary(totalSalary);
-      }
-
-      // ดึงข้อมูล withdrawals
-      const { data: withdrawals } = await supabase
-        .from('withdrawals')
-        .select('amount')
-        .eq('user_id', user.id);
-
-      if (withdrawals) {
-        const total = withdrawals.reduce((sum, w) => sum + w.amount, 0);
-        setTotalWithdrawn(total);
-      }
-
-      // ดึงข้อมูลประวัติการเบิกเงิน
-      const { data: withdrawalHistory } = await supabase
-        .from('withdrawals')
-        .select('amount, withdrawal_date')
-        .eq('user_id', user.id)
-        .order('withdrawal_date', { ascending: false });
-
-      if (withdrawalHistory) {
-        setWithdrawalHistory(withdrawalHistory);
       }
     };
 
