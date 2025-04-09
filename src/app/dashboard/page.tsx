@@ -35,6 +35,7 @@ const SHIFTS = {
 
 export default function Dashboard() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'actions' | 'calendar'>('actions');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [dayTime, setDayTime] = useState(0);
   const [overTime, setOverTime] = useState(0);
@@ -560,6 +561,94 @@ export default function Dashboard() {
     }, 200);
   };
 
+  // ฟังก์ชันสำหรับสร้างวันในปฏิทิน
+  const getDaysInMonth = (year: number, month: number) => {
+    const date = new Date(year, month, 1);
+    const days: CalendarDay[] = [];
+    
+    // เพิ่มวันจากเดือนก่อนหน้า
+    const firstDay = date.getDay();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    for (let i = firstDay - 1; i >= 0; i--) {
+      const day = new Date(year, month - 1, prevMonthDays - i);
+      days.push({
+        date: day,
+        isCurrentMonth: false,
+        hasCheckIn: checkInList.some(checkIn => 
+          new Date(checkIn.check_date).toDateString() === day.toDateString()
+        ),
+        shift: checkInList.find(checkIn => 
+          new Date(checkIn.check_date).toDateString() === day.toDateString()
+        )?.shift
+      });
+    }
+    
+    // เพิ่มวันในเดือนปัจจุบัน
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let i = 1; i <= daysInMonth; i++) {
+      const day = new Date(year, month, i);
+      days.push({
+        date: day,
+        isCurrentMonth: true,
+        hasCheckIn: checkInList.some(checkIn => 
+          new Date(checkIn.check_date).toDateString() === day.toDateString()
+        ),
+        shift: checkInList.find(checkIn => 
+          new Date(checkIn.check_date).toDateString() === day.toDateString()
+        )?.shift
+      });
+    }
+    
+    // เพิ่มวันจากเดือนถัดไป
+    const remainingDays = 42 - days.length; // 6 weeks * 7 days = 42
+    for (let i = 1; i <= remainingDays; i++) {
+      const day = new Date(year, month + 1, i);
+      days.push({
+        date: day,
+        isCurrentMonth: false,
+        hasCheckIn: checkInList.some(checkIn => 
+          new Date(checkIn.check_date).toDateString() === day.toDateString()
+        ),
+        shift: checkInList.find(checkIn => 
+          new Date(checkIn.check_date).toDateString() === day.toDateString()
+        )?.shift
+      });
+    }
+    
+    return days;
+  };
+
+  const calendarDays = getDaysInMonth(
+    selectedMonth.getFullYear(),
+    selectedMonth.getMonth()
+  );
+
+  const getShiftColor = (shift: string | undefined) => {
+    switch (shift) {
+      case 'morning':
+        return 'bg-green-100 text-green-800';
+      case 'evening':
+        return 'bg-blue-100 text-blue-800';
+      case 'fullday':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return '';
+    }
+  };
+
+  const getShiftLabel = (shift: string | undefined) => {
+    switch (shift) {
+      case 'morning':
+        return 'เช้า';
+      case 'evening':
+        return 'เย็น';
+      case 'fullday':
+        return 'เต็มวัน';
+      default:
+        return '';
+    }
+  };
+
   if (!profile) {
     return null;
   }
@@ -571,18 +660,18 @@ export default function Dashboard() {
           {/* Header Section */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-athiti font-bold text-gray-800">สวัสดี, {profile.name}!</h1>
+              <h1 className="text-2xl font-athiti font-bold text-gray-800">สวัสดี, {profile?.name}!</h1>
               <p className="text-gray-500 mt-1">วันนี้คุณอยากทำอะไร?</p>
             </div>
             <div className="flex items-center gap-4">
-              <button 
+              <button
                 onClick={() => setShowEditModal(true)}
                 className="text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <i className="fas fa-user-circle text-2xl"></i>
               </button>
               <div className="relative settings-dropdown">
-                <button 
+                <button
                   onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
                   className="text-gray-500 hover:text-gray-700 transition-colors settings-button"
                 >
@@ -616,7 +705,7 @@ export default function Dashboard() {
                 <div className="text-center">
                   <p className="text-blue-600 text-sm font-medium mb-1">ยอดเงินคงเหลือ</p>
                   <h3 className="text-4xl font-semibold text-gray-800 mb-1">฿ {(salary - totalWithdrawn).toLocaleString()}</h3>
-                  <p className="text-blue-600/60 text-xs mt-1">เรท: {profile.rate} บาท/วัน</p>
+                  <p className="text-blue-600/60 text-xs mt-1">เรท: {profile?.rate} บาท/วัน</p>
                 </div>
               </div>
             </div>
@@ -629,7 +718,7 @@ export default function Dashboard() {
               >
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    <p className="text-green-600 text-sm font-medium mb-1">วันทำงาน</p>
+                    <p className="text-green-600 text-sm font-medium mb-1">วันทำงานทั้งหมด</p>
                     <h3 className="text-2xl font-semibold text-gray-800">{dayTime} วัน</h3>
                     <div className="w-full bg-green-200 h-1 rounded-full mt-2">
                       <div 
@@ -647,7 +736,7 @@ export default function Dashboard() {
                   <div className="text-center">
                     <p className="text-yellow-600 text-sm font-medium mb-1">วันทำงานเต็มวัน</p>
                     <h3 className="text-2xl font-semibold text-gray-800">{overTime} วัน</h3>
-                    <p className="text-yellow-600/60 text-xs mt-1">เรท {profile.fullday_rate} บาท/วัน</p>
+                    <p className="text-yellow-600/60 text-xs mt-1">เรท {profile?.fullday_rate} บาท/วัน</p>
                   </div>
                 </div>
               </div>
@@ -657,75 +746,202 @@ export default function Dashboard() {
           {/* Main Actions */}
           <div className="mb-6 flex-grow">
             <h2 className="text-2xl font-athiti font-bold text-gray-800 mb-4">การดำเนินการ</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button 
-                onClick={() => {
-                  const today = new Date();
-                  const year = today.getFullYear();
-                  const month = String(today.getMonth() + 1).padStart(2, '0');
-                  const day = String(today.getDate()).padStart(2, '0');
-                  const formattedDate = `${year}-${month}-${day}`;
-                  
-                  setCheckDate(formattedDate);
-                  setError('');
-                  setShowCheckInModal(true);
-                }}
-                className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-500 hover:shadow-md transition-all group relative"
+            
+            {/* Tab Navigation */}
+            <div className="flex mb-4 bg-white rounded-lg shadow-sm border">
+              <button
+                className={`flex-1 py-2 text-center font-medium transition-colors ${
+                  activeTab === 'actions'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+                onClick={() => setActiveTab('actions')}
               >
-                <div className="absolute top-2 right-3 text-sm text-gray-500">
-                  {new Date().toLocaleDateString('th-TH', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </div>
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                  <i className="fas fa-sign-in-alt"></i>
-                </div>
-                <div className="text-left">
-                  <h3 className="text-gray-800 font-medium">เช็คอินวันนี้</h3>
-                  <p className="text-gray-500 text-sm">กดเพื่อเช็คอิน</p>
-                </div>
+                การดำเนินการ
               </button>
-
-              <button 
-                onClick={() => {
-                  setError('');
-                  setShowPaymentModal(true);
-                }}
-                className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-green-500 hover:shadow-md transition-all group relative"
+              <button
+                className={`flex-1 py-2 text-center font-medium transition-colors ${
+                  activeTab === 'calendar'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+                onClick={() => setActiveTab('calendar')}
               >
-                <div className="absolute top-2 right-3 text-sm text-gray-500">
-                  ฿ {(salary - totalWithdrawn).toLocaleString()}
-                </div>
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-500 group-hover:bg-green-500 group-hover:text-white transition-colors">
-                  <i className="fas fa-wallet"></i>
-                </div>
-                <div className="text-left">
-                  <h3 className="text-gray-800 font-medium">เบิกเงิน</h3>
-                  <p className="text-gray-500 text-sm">กดเพื่อเบิกเงิน</p>
-                </div>
+                ปฏิทิน
               </button>
+            </div>
 
-              {profile.is_admin && (
+            {/* Tab Content */}
+            {activeTab === 'actions' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Action Buttons */}
                 <button 
-                  onClick={() => router.push('/admin/summary')}
+                  onClick={() => {
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    const formattedDate = `${year}-${month}-${day}`;
+                    
+                    setCheckDate(formattedDate);
+                    setError('');
+                    setShowCheckInModal(true);
+                  }}
+                  className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-500 hover:shadow-md transition-all group relative"
+                >
+                  <div className="absolute top-2 right-3 text-sm text-gray-500">
+                    {new Date().toLocaleDateString('th-TH', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </div>
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <i className="fas fa-sign-in-alt"></i>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-gray-800 font-medium">เช็คอินวันนี้</h3>
+                    <p className="text-gray-500 text-sm">กดเพื่อเช็คอิน</p>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    setError('');
+                    setShowPaymentModal(true);
+                  }}
+                  className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-green-500 hover:shadow-md transition-all group relative"
+                >
+                  <div className="absolute top-2 right-3 text-sm text-gray-500">
+                    ฿ {(salary - totalWithdrawn).toLocaleString()}
+                  </div>
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-500 group-hover:bg-green-500 group-hover:text-white transition-colors">
+                    <i className="fas fa-wallet"></i>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-gray-800 font-medium">เบิกเงิน</h3>
+                    <p className="text-gray-500 text-sm">กดเพื่อเบิกเงิน</p>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => setShowWithdrawalHistoryModal(true)}
                   className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-500 hover:shadow-md transition-all group"
                 >
                   <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                    <i className="fas fa-chart-bar"></i>
+                    <i className="fas fa-history"></i>
                   </div>
                   <div className="text-left">
-                    <h3 className="text-gray-800 font-medium">ระบบจัดการ</h3>
-                    <p className="text-gray-500 text-sm">สำหรับผู้ดูแลระบบ</p>
+                    <h3 className="text-gray-800 font-medium">ประวัติการเบิก</h3>
+                    <p className="text-gray-500 text-sm">ดูประวัติการเบิกเงิน</p>
                   </div>
                 </button>
-              )}
-            </div>
+
+                {profile.is_admin && (
+                  <button 
+                    onClick={() => router.push('/admin/summary')}
+                    className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-500 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                      <i className="fas fa-chart-bar"></i>
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-gray-800 font-medium">ระบบจัดการ</h3>
+                      <p className="text-gray-500 text-sm">สำหรับผู้ดูแลระบบ</p>
+                    </div>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-sm p-6 overflow-y-auto max-h-[450px]">
+                {/* Calendar Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1))}
+                      className="p-2 hover:bg-gray-100 rounded-full"
+                    >
+                      <i className="fas fa-chevron-left"></i>
+                    </button>
+                    <input
+                      type="month"
+                      value={`${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`}
+                      onChange={(e) => {
+                        const [year, month] = e.target.value.split('-');
+                        setSelectedMonth(new Date(parseInt(year), parseInt(month) - 1));
+                      }}
+                      className="px-3 py-1 border rounded-lg hover:border-gray-300 focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      onClick={() => setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1))}
+                      className="p-2 hover:bg-gray-100 rounded-full"
+                    >
+                      <i className="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setSelectedMonth(new Date())}
+                    className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                  >
+                    วันนี้
+                  </button>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'].map((day) => (
+                    <div key={day} className="text-center font-medium text-gray-600 py-2">
+                      {day}
+                    </div>
+                  ))}
+                  {calendarDays.map((day, index) => (
+                    <div
+                      key={index}
+                      className={`p-2 min-h-[50px] border rounded-lg ${
+                        day.isCurrentMonth ? 'bg-white' : 'bg-gray-50'
+                      } ${
+                        day.date.toDateString() === new Date().toDateString()
+                          ? 'ring-2 ring-blue-400'
+                          : ''
+                      }`}
+                    >
+                      <div className="text-right mb-1">
+                        <span className={`text-sm ${
+                          day.isCurrentMonth ? 'text-gray-700' : 'text-gray-400'
+                        }`}>
+                          {day.date.getDate()}
+                        </span>
+                      </div>
+                      {day.hasCheckIn && (
+                        <div className={`text-xs px-2 py-1 rounded-full text-center ${getShiftColor(day.shift)}`}>
+                          {getShiftLabel(day.shift)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center justify-center gap-4 mt-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-100"></div>
+                    <span>เช้า</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-100"></div>
+                    <span>เย็น</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-yellow-100"></div>
+                    <span>เต็มวัน</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Modals */}
+        {/* Existing modals */}
         {showEditModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-6 w-full max-w-[340px] space-y-4">
